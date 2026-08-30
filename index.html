@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ຂາຍรองเท้า - Premium Store</title>
+    <!-- ນຳເຂົ້າຟອນພາສາລາວທີ່ສວຍງາມຈາກ Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #111111;
+            --accent: #FF4A22; /* ສີສົ້ມດຶງດູດສາຍຕາສຳລັບປຸ່ມຊື້ */
+            --bg: #F8F9FA;
+        }
+        body {
+            font-family: 'Noto Sans Lao', sans-serif;
+            background-color: var(--bg);
+            margin: 0; padding: 0; color: #333;
+        }
+        /* ແຖບເມນູດ້ານເທິງ (Navbar) */
+        header {
+            background: white;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .cart { background: var(--primary); color: white; padding: 10px 20px; border-radius: 25px; font-weight: 600; cursor: pointer; }
+        
+        /* ໂຄງສ້າງການຈັດວາງສິນຄ້າ (Grid) */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        /* ກ່ອງສິນຄ້າ (Product Card) */
+        .card {
+            background: white; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex; flex-direction: column;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .card-img {
+            height: 250px;
+            /* ໃຊ້ຮູບຕົວຢ່າງຈາກອິນເຕີເນັດເພື່ອຄວາມງາມ */
+            background-image: url('https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80');
+            background-size: cover; background-position: center;
+        }
+        .card-body { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+        .title { font-size: 1.2rem; font-weight: 600; margin: 0 0 10px 0; }
+        .price { font-size: 1.3rem; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+        .stock { font-size: 0.9rem; color: #777; margin-bottom: 20px; }
+        
+        /* ປຸ່ມສັ່ງຊື້ */
+        .buy-btn {
+            margin-top: auto; background: white; color: var(--primary);
+            border: 2px solid var(--primary); padding: 12px;
+            border-radius: 8px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: 0.3s; width: 100%;
+        }
+        .buy-btn:hover { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">👟ເກີບ</div>
+        <div class="cart">ກະຕ່າສິນຄ້າ (0)</div>
+    </header>
+
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 40px;">ສິນຄ້າເຂົ້າໃໝ່ (New Arrivals)</h2>
+        <div id="product-list" class="product-grid">
+            <!-- ຂໍ້ມູນຈາກ Firebase ຈະມາສະແດງຢູ່ບ່ອນນີ້ -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        // ເພີ່ມຄຳສັ່ງ 'update' ເຂົ້າມາເພື່ອໃຊ້ສຳລັບແກ້ໄຂຂໍ້ມູນ
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // --- ຢ່າລືມເອົາ Config ຂອງທ່ານມາວາງໃສ່ບ່ອນນີ້ ---
+        const firebaseConfig = {
+           apiKey: "AIzaSyC_Ue9D6DApXvU3c2ShwvyrtTNPyXAPb3w",
+           authDomain: "shoe-store-db.firebaseapp.com",
+           databaseURL: "https://shoe-store-db-default-rtdb.firebaseio.com",
+           projectId: "shoe-store-db",
+           storageBucket: "shoe-store-db.firebasestorage.app",
+           messagingSenderId: "93803254860",
+           appId: "1:93803254860:web:ca80e0ed5595cc902710e9",
+           measurementId: "G-TXD6H23NQ3"
+        };
+        // ------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const productsRef = ref(db, 'products');
+
+        // ສ້າງຟັງຊັນສຳລັບການສັ່ງຊື້ ແລະ ຕັດສະຕັອກ (ເອົາໄວ້ໃນ window ເພື່ອໃຫ້ປຸ່ມ HTML ເອີ້ນໃຊ້ໄດ້)
+        window.buyProduct = function(productId, currentStock, productName) {
+            if (currentStock > 0) {
+                // ຖ້າຍັງມີເຄື່ອງ ໃຫ້ລົບສະຕັອກລົງ 1
+                const newStock = currentStock - 1;
+                const itemRef = ref(db, 'products/' + productId);
+                
+                // ອັບເດດຂໍ້ມູນໄປທີ່ Firebase
+                update(itemRef, { stock: newStock })
+                    .then(() => {
+                        alert(`ເພີ່ມ ${productName} ລົງກະຕ່າສຳເລັດ!`);
+                    })
+                    .catch((error) => {
+                        alert("ເກີດຂໍ້ຜິດພາດ: " + error);
+                    });
+            } else {
+                // ຖ້າເຄື່ອງໝົດ
+                alert(`ຂໍອະໄພ, ${productName} ສິນຄ້າໝົດແລ້ວ!`);
+            }
+        };
+
+        // ດຶງຂໍ້ມູນມາສະແດງຜົນ (ໂຄດສ່ວນນີ້ຄືເກົ່າ)
+        onValue(productsRef, (snapshot) => {
+            const data = snapshot.val();
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = ''; 
+
+            if (data) {
+                for (let key in data) {
+                    let product = data[key];
+                    // ປ່ຽນສະຖານະປຸ່ມຖ້າສິນຄ້າໝົດ
+                    let buttonHtml = product.stock > 0 
+                        ? `<button class="buy-btn" onclick="buyProduct('${key}', ${product.stock}, '${product.name}')">ເພີ່ມລົງກະຕ່າ</button>`
+                        : `<button class="buy-btn" style="background: #ccc; border-color: #ccc; color: #666; cursor: not-allowed;" disabled>ສິນຄ້າໝົດ</button>`;
+
+                    productList.innerHTML += `
+                        <div class="card">
+                            <div class="card-img"></div>
+                            <div class="card-body">
+                                <h3 class="title">${product.name}</h3>
+                                <div class="price">฿${product.price}</div>
+                                <div class="stock">ເຫຼືອພຽງ: ${product.stock} ຄູ່</div>
+                                ${buttonHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                productList.innerHTML = '<p>ຍັງບໍ່ມີສິນຄ້າ</p>';
+            }
+        });
+    </script>
+</body>
+</html>
